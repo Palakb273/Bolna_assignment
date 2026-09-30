@@ -1,0 +1,1125 @@
+Phase 2B — Validation Engine Design
+1. Status
+Proposed design for review
+Phase 2A is complete.
+Phase 2B adds the real address-validation engine behind the domain model.
+It must preserve all 2A invariants:
+candidate update
+→ immutable version
+
+validation result
+→ bound to exact version
+
+correction
+→ invalidates old validation/read-back/confirmation
+
+save eligibility
+→ remains impossible without matching validation + confirmation evidence
+
+2B does not change confirmation or save rules.
+2. Goal
+Build a deterministic validation service that takes:
+AddressSnapshot(version=N)
+
+and returns:
+VALID
+NEEDS_CLARIFICATION
+VALIDATION_ERROR
+
+plus structured evidence explaining why.
+Example:
+{
+  "status": "VALID",
+  "version": 4,
+  "missing_fields": [],
+  "conflicts": [],
+  "canonical_address": {
+    "house_flat": "B-1204",
+    "building": "Prestige High Fields",
+    "area": "Financial District",
+    "city": "Hyderabad",
+    "state": "Telangana",
+    "pincode": "500032"
+  }
+}
+
+or:
+{
+  "status": "NEEDS_CLARIFICATION",
+  "version": 4,
+  "missing_fields": ["pincode"],
+  "conflicts": [],
+  "reason_codes": [
+    "PINCODE_REQUIRED"
+  ]
+}
+
+3. Why validation must be separate from the LLM
+The LLM may understand:
+“Mera PIN five zero zero zero three two hai.”
+
+But it should not decide:
+“That PIN definitely belongs to Hyderabad.”
+
+That belongs to deterministic code + trusted postal data.
+Architecture:
+Bolna/LLM
+   ↓
+candidate values
+   ↓
+2A domain version
+   ↓
+2B validator
+   ↓
+postal data
+   ↓
+structured validation result
+
+4. Authoritative postal data source
+For the first implementation, use the Department of Posts / Government of India PIN directory, not an arbitrary third-party PIN API.
+The Government's Open Data platform publishes the All India Pincode Directory, contributed by the Department of Posts, with fields including circle, region, division, office, PIN code, office type, delivery, district, and state. The catalog says it is updated monthly. Data.gov.in
+India Post also publishes a PIN-code list and a post-office locator. India Post
+India Post defines PIN as a six-digit postcode for the area mapped to the delivering post office. India Post
+Therefore 2B should treat:
+Department of Posts / data.gov.in
+
+as the primary postal reference source.
+5. Important limitation of postal data
+The official PIN directory gives strong data for:
+PIN
+state
+district
+post office
+division
+region
+circle
+
+but that does not mean it gives a perfect consumer-facing city/locality mapping.
+This distinction matters.
+Do not assume:
+district == city
+
+and do not treat:
+customer city not present in office record
+
+as automatic proof that the customer is wrong.
+Example:
+Customer says:
+Gachibowli, Hyderabad, 500032
+
+Postal data may represent administrative/post-office names differently.
+Therefore:
+PIN ↔ state
+
+can usually be strong validation.
+PIN ↔ district
+
+can be useful.
+PIN ↔ city/locality
+
+must initially be conservative.
+6. Validation philosophy
+The validator should have three principles:
+Principle 1 — Fail closed on uncertainty
+If the validator cannot establish something:
+NEEDS_CLARIFICATION
+
+or:
+VALIDATION_ERROR
+
+not:
+VALID
+
+Principle 2 — Do not overwrite the customer silently
+Bad:
+customer says Haryana
+postal lookup says Telangana
+→ silently replace Haryana with Telangana
+
+Correct:
+→ report conflict
+→ ask customer for clarification
+
+Principle 3 — Missing knowledge is not contradiction
+If postal data lacks a locality alias:
+UNKNOWN
+
+is not the same as:
+CONFLICT
+
+7. Validation result model
+Add a domain object roughly equivalent to:
+class ValidationResult:    version: int    status: ValidationStatus    canonical_address: AddressSnapshot | None    missing_fields: tuple[str, ...]    conflicts: tuple[ValidationConflict, ...]    warnings: tuple[ValidationWarning, ...]    source: PostalDataProvenance | None
+
+
+Statuses:
+VALID
+NEEDS_CLARIFICATION
+VALIDATION_ERROR
+
+Do not add:
+INVALID_ADDRESS
+
+as a broad generic state yet.
+Most failures at this stage are:
+missing data
+format issue
+conflicting data
+lookup unavailable
+ambiguous postal evidence
+
+8. Reason codes
+Use machine-readable reason codes.
+Examples:
+PINCODE_REQUIRED
+PINCODE_WRONG_LENGTH
+PINCODE_NON_ASCII_CANONICAL
+PINCODE_NOT_FOUND
+
+HOUSE_IDENTIFIER_REQUIRED
+AREA_REQUIRED
+CITY_REQUIRED
+
+STATE_PINCODE_CONFLICT
+DISTRICT_PINCODE_CONFLICT
+
+POSTAL_DATA_UNAVAILABLE
+POSTAL_DATA_AMBIGUOUS
+POSTAL_DATA_STALE
+
+These allow the future agent/API layer to decide what question to ask.
+9. Required-field policy
+Do not blindly require all nine fields.
+For a normal urban address, initial 2B requirements should be:
+1. identifying premise information
+2. area/locality
+3. city
+4. PIN
+
+10. Premise identification
+A valid candidate needs some customer-supplied way to identify the premises.
+Examples:
+Flat 302
+House 17
+Plot 82
+Shop 4
+Villa 9
+Room 204
+
+But some addresses may legitimately not have a conventional house/flat number.
+Therefore allow an alternative identifying description.
+Example:
+"Sharma Medical Store"
+
+or:
+"House beside Government School"
+
+if provided by the customer.
+2B should not invent a house number.
+11. Proposed premise rule
+Define something like:
+has_premise_identifier =
+    house_flat is non-empty
+    OR sufficiently identifying building/description exists
+
+Do not make this overly semantic in 2B.
+Avoid letting an LLM determine whether something is "sufficient."
+Use deterministic configuration/rules initially.
+12. Required urban fields
+Initial rule:
+premise identifier  required
+area                required
+city                required
+pincode             required
+
+Contextual/optional:
+building
+street
+landmark
+district
+state
+
+State can sometimes be derived from trusted postal evidence, but derivation must be explicit in the validation result.
+13. PIN canonicalization
+PIN candidate input may arrive as:
+"500032"
+"500 032"
+"५०००३२"
+
+2A intentionally permitted incomplete/noncanonical candidate strings.
+2B now introduces deterministic canonicalization.
+14. Unicode digit handling
+This must be explicit.
+Python treats many Unicode numerals as digits.
+But our canonical PIN should be:
+six ASCII characters 0-9
+
+Examples:
+"५०००३२"
+
+may safely normalize to:
+"500032"
+
+only through a deliberate Unicode decimal-digit conversion.
+Do not use casual:
+isdigit()
+
+
+and then assume the result is already canonical ASCII.
+15. PIN normalization rules
+Allowed normalization can include:
+trim outer whitespace
+remove clearly insignificant internal spacing/separators
+convert Unicode decimal digits → ASCII digits
+
+Example:
+"500 032" → "500032"
+"५०००३२" → "500032"
+
+But:
+"five zero zero..."
+
+should not be interpreted by 2B.
+Speech-to-number interpretation belongs before this layer.
+2B receives text candidate data, not audio semantics.
+16. PIN validation sequence
+Use this sequence:
+raw candidate
+   ↓
+normalize supported Unicode digits
+   ↓
+canonical string
+   ↓
+exactly six ASCII digits?
+   ↓
+lookup PIN in postal dataset
+
+Outcomes:
+Missing
+NEEDS_CLARIFICATION
+PINCODE_REQUIRED
+
+Wrong length
+NEEDS_CLARIFICATION
+PINCODE_WRONG_LENGTH
+
+Unsupported content
+NEEDS_CLARIFICATION
+PINCODE_INVALID_FORMAT
+
+Six digits but absent from authoritative data
+NEEDS_CLARIFICATION
+PINCODE_NOT_FOUND
+
+Not immediately "address invalid."
+The caller may simply have supplied or been transcribed incorrectly.
+17. Postal record model
+Internally represent official data roughly as:
+class PostalRecord:    pincode: str    office_name: str    office_type: str | None    delivery: str | None    district: str    state: str    division: str | None    region: str | None    circle: str | None
+
+
+A PIN may map to multiple post-office rows.
+This is expected.
+Do not assume:
+one PIN == one row
+
+18. Lookup result
+Define:
+class PostalLookupResult:    pincode: str    records: tuple[PostalRecord, ...]    provenance: PostalDataProvenance
+
+
+19. Data provenance
+Every validation result that relies on postal data should know:
+source name
+source version/date
+retrieval/import date
+dataset checksum
+
+Example:
+{
+  "source": "Department of Posts / data.gov.in All India Pincode Directory",
+  "source_updated_at": "2026-08-10",
+  "imported_at": "...",
+  "sha256": "..."
+}
+
+The current OGD catalog indicates monthly granularity and a 2026 update for the PIN directory. Data.gov.in
+This makes results auditable.
+20. No invisible dataset changes
+If postal data changes later, the application should know which dataset version produced an old validation.
+Do not have:
+validation from January
+
+suddenly mean something different because a CSV was overwritten in place in September.
+2B should design provenance now even if persistence arrives in 2C.
+21. State validation
+Postal rows for a PIN should normally resolve to one canonical state.
+Example conceptually:
+500032
+→ Telangana
+
+If customer state exists and differs after conservative normalization:
+STATE_PINCODE_CONFLICT
+
+Result:
+NEEDS_CLARIFICATION
+
+Do not silently replace it.
+22. State name normalization
+Safe aliases can be deterministic.
+Examples:
+UP → Uttar Pradesh
+U.P. → Uttar Pradesh
+
+TN → Tamil Nadu
+
+Telengana → ?
+
+Be careful.
+Common abbreviations may have configured aliases.
+Fuzzy spell correction should not automatically turn an uncertain customer value into canonical truth.
+Initial design:
+exact normalized name
++
+explicit alias table
+
+No broad fuzzy matching yet.
+23. District validation
+If customer provides district:
+customer district
+
+can be compared against postal records.
+If every official record for the PIN disagrees:
+DISTRICT_PINCODE_CONFLICT
+
+If district is absent:
+do not require it for an ordinary urban address.
+24. City validation
+Treat city more conservatively than state/district.
+The official directory contains post-office/district administrative data, not necessarily a single canonical consumer city for every address. Data.gov.in
+Therefore 2B should initially not reject an address solely because the customer's city does not equal an office or district string.
+City rules:
+city missing
+→ clarification
+
+city supplied
+→ preserve customer value
+
+Future richer geographic validation can improve this.
+25. Area/locality validation
+Same philosophy.
+Do not require:
+area == post office name
+
+because users frequently use:
+neighborhood
+society name
+sector name
+locality alias
+
+Postal datasets do not represent every colloquial locality.
+So:
+area is primarily completeness data in 2B
+
+not strict postal matching data.
+26. Safe derivation
+2B may derive values only where evidence is sufficiently deterministic.
+Initial safe candidate:
+state from PIN
+
+if:
+all authoritative rows for PIN agree on state
+
+Possibly district if all records agree.
+But derived values must be marked.
+Example:
+{
+  "state": {
+    "value": "Telangana",
+    "origin": "POSTAL_DATA"
+  }
+}
+
+instead of pretending the customer said it.
+27. Canonical address
+The canonical validation result should distinguish provenance.
+Conceptually:
+{
+  "house_flat": {
+    "value": "B-1204",
+    "origin": "CUSTOMER"
+  },
+  "area": {
+    "value": "Financial District",
+    "origin": "CUSTOMER"
+  },
+  "city": {
+    "value": "Hyderabad",
+    "origin": "CUSTOMER"
+  },
+  "state": {
+    "value": "Telangana",
+    "origin": "POSTAL_DATA"
+  },
+  "pincode": {
+    "value": "500032",
+    "origin": "CUSTOMER_NORMALIZED"
+  }
+}
+
+You may not need this exact API object yet, but the domain design should retain this distinction.
+28. Normalization and versioning
+Critical 2A rule:
+A validation result cannot silently mutate the validated snapshot.
+
+Suppose candidate version 3 has:
+pincode = "५०००३२"
+
+Validator canonicalizes it:
+500032
+
+If canonical content differs from the current candidate representation and the canonical address is what will later be read back/saved, create an explicit address-version transition.
+Do not do:
+version 3 silently becomes different
+
+Instead conceptually:
+v3 raw candidate
+↓ deterministic normalization
+v4 canonical candidate
+↓ validate v4
+
+This preserves auditability.
+29. Validation pipeline
+The pipeline should approximately be:
+AddressSnapshot
+      ↓
+schema/domain invariants
+      ↓
+required-field check
+      ↓
+field normalization proposal
+      ↓
+PIN canonicalization
+      ↓
+postal lookup
+      ↓
+state consistency
+      ↓
+district consistency if supplied
+      ↓
+produce validation result
+
+30. Validation outcome: VALID
+Return VALID only when:
+required fields satisfied
+
+AND
+
+PIN canonical format valid
+
+AND
+
+PIN found in trusted postal data
+
+AND
+
+no strong geographic conflicts
+
+AND
+
+postal lookup completed successfully
+
+Warnings may still exist.
+31. Validation outcome: NEEDS_CLARIFICATION
+Examples:
+missing PIN
+five-digit PIN
+PIN not found
+missing city
+missing area
+state/PIN disagreement
+district/PIN disagreement
+premise information unavailable
+ambiguous customer field
+
+This is the normal recoverable state.
+32. Validation outcome: VALIDATION_ERROR
+Use when infrastructure/evidence failed, not when customer data merely needs clarification.
+Examples:
+postal dataset unavailable
+postal data corrupt
+checksum mismatch
+lookup subsystem crashed
+source version cannot be established
+
+The agent should eventually say:
+“I'm having trouble validating the address right now.”
+
+rather than telling the customer their address is wrong.
+33. Conflict model
+Define:
+class ValidationConflict:    code: ConflictCode    fields: tuple[str, ...]    observed: ...    expected_options: ...
+
+
+Be careful not to expose too much internal postal data to the conversational layer unnecessarily.
+Example:
+{
+  "code": "STATE_PINCODE_CONFLICT",
+  "fields": ["state", "pincode"]
+}
+
+may be enough.
+34. Suggested clarification
+2B may return a deterministic suggestion such as:
+ASK_PINCODE
+ASK_CITY
+ASK_AREA
+REPEAT_PINCODE
+CLARIFY_STATE_OR_PINCODE
+
+Prefer machine-readable action codes over freeform LLM instructions.
+Example:
+{
+  "next_action": "REPEAT_PINCODE"
+}
+
+Then future 2D/2E maps that to conversational wording.
+35. Avoid embedding voice text in validator
+Do not make the core validator return:
+“Please tell me your PIN again.”
+
+Instead:
+reason_code = PINCODE_WRONG_LENGTH
+next_action = REPEAT_PINCODE
+
+This keeps validation separate from voice UX.
+36. Dataset ingestion
+2B should introduce a postal-data adapter abstraction.
+Example:
+class PostalDirectory:    def lookup_pincode(self, pincode: str) -> PostalLookupResult:        ...
+
+
+Initial implementation may use:
+versioned local snapshot of official dataset
+
+rather than making an internet request for every validation.
+That is preferable because:
+deterministic
+fast
+testable
+not dependent on remote availability for each call
+
+37. Why local snapshot instead of live API for every lookup
+For a voice call, a remote government API could:
+timeout
+rate-limit
+change response format
+go temporarily unavailable
+
+A versioned local dataset gives predictable validation.
+Refresh the official data separately.
+38. Proposed 2B file map
+app/
+└── validation/
+    ├── __init__.py
+    ├── engine.py
+    ├── required_fields.py
+    ├── normalization.py
+    ├── postal.py
+    ├── models.py
+    └── errors.py
+
+app/domain/
+    existing 2A modules
+
+data/
+└── postal/
+    ├── README.md
+    └── .gitkeep
+
+Depending on licensing/repository-size decisions, the actual official dataset may not be committed directly.
+Tests:
+tests/unit/
+    test_validation_engine.py
+    test_required_fields.py
+    test_pincode_normalization.py
+    test_postal_matching.py
+    test_validation_provenance.py
+
+tests/fixtures/
+    postal_records.json
+
+39. Test fixtures
+Do not make ordinary unit tests depend on the full India-wide dataset.
+Use small deterministic fixtures.
+Example:
+[
+  {
+    "pincode": "500032",
+    "office_name": "Example Office A",
+    "district": "Hyderabad",
+    "state": "Telangana"
+  },
+  {
+    "pincode": "110001",
+    "office_name": "Example Office B",
+    "district": "New Delhi",
+    "state": "Delhi"
+  }
+]
+
+Fixture names can be representative while avoiding dependence on a live external service.
+Then separately test real data ingestion.
+40. PIN tests
+Must include:
+500032
+
+valid.
+50003
+
+clarification.
+5000327
+
+clarification.
+"500 032"
+
+normalized deliberately.
+"५०००३२"
+
+Unicode → ASCII canonicalization.
+"500O32"
+
+must NOT automatically convert letter O to zero.
+That requires clarification.
+This is important.
+41. Never guess O vs 0
+Bad normalization:
+500O32
+→ 500032
+
+That may hide an STT error.
+Correct:
+PINCODE_INVALID_FORMAT
+→ repeat digits
+
+42. Required-field tests
+Cases:
+Complete
+house_flat
+area
+city
+pincode
+
+passes required-field stage.
+Missing PIN
+clarification.
+Missing city
+clarification.
+Missing area
+clarification.
+No house number but legitimate identifying description
+allowed if explicit configured premise criterion passes.
+Nothing identifying premise
+clarification.
+43. Geographic tests
+Test:
+PIN → one state
+customer state matches
+→ no conflict
+
+PIN → one state
+customer state differs
+→ STATE_PINCODE_CONFLICT
+
+customer state absent
+PIN has unanimous state
+→ safe derived state
+
+postal rows disagree on state
+→ POSTAL_DATA_AMBIGUOUS
+
+Do not guess.
+44. District tests
+district supplied + matching
+→ okay
+
+district absent
+→ okay
+
+district supplied + clear disagreement
+→ clarification
+
+45. City tests
+Test explicitly that:
+city != district
+
+does not automatically produce conflict.
+This prevents a future developer from accidentally treating district as city.
+46. Provenance tests
+Every successful postal lookup result should carry:
+dataset source
+dataset version/date
+checksum/identifier
+
+If provenance is unavailable:
+VALIDATION_ERROR
+
+for validation requiring that data.
+This is consistent with the strict evidence philosophy of 2A.
+47. Data ingestion validation
+When loading the official postal dataset, verify:
+expected columns
+valid six-digit PIN strings
+non-empty state
+non-empty district where required by source schema
+duplicate rows allowed
+encoding valid
+checksum recorded
+
+Reject a malformed dataset rather than partially loading it silently.
+48. Duplicate PIN rows
+Duplicates/multiple records for a PIN are normal because multiple post offices can share a PIN.
+Therefore:
+same PIN + multiple offices
+
+must not be considered duplicate corruption.
+Aggregate values.
+For example:
+states = unique state values
+districts = unique district values
+
+49. Safe aggregation
+For:
+PIN X
+rows:
+state=A
+state=A
+state=A
+
+derive:
+state=A
+
+For:
+state=A
+state=B
+
+return:
+POSTAL_DATA_AMBIGUOUS
+
+even if such official inconsistency is rare.
+50. Case normalization
+For comparisons, safe normalization can include:
+Unicode normalization
+trim spaces
+collapse repeated whitespace
+casefold
+explicit aliases
+
+Do not destroy stored customer spelling.
+Comparison representation can differ from presentation value.
+51. Validation purity
+The validation engine should be as pure as possible:
+snapshot
++
+postal directory
++
+validation policy
+→ validation result
+
+It should not:
+write database
+call Bolna
+perform TTS
+save addresses
+mark confirmation
+
+52. Integration with 2A
+2B should produce a trusted domain validation result.
+Then 2A applies it:
+session.apply_validation(result)
+
+The existing version binding must remain enforced.
+If:
+result.version = 3
+current_version = 4
+
+2A rejects it.
+No special bypass.
+53. Canonicalization transition
+If validator proposes a canonical change:
+raw v3 pincode = "५०००३२"
+canonical = "500032"
+
+return something like:
+NORMALIZATION_REQUIRED
+
+with proposed deterministic changes.
+Application/domain orchestration then performs:
+update expected_version=3
+→ v4
+
+and validates v4.
+Do not validate v3 while secretly treating it as v4.
+54. Suggested result taxonomy
+I would use:
+VALID
+
+NEEDS_CLARIFICATION
+
+NORMALIZATION_REQUIRED
+
+VALIDATION_ERROR
+
+NORMALIZATION_REQUIRED is useful because 2A requires visible version transitions when canonical content changes.
+55. Normalization proposal model
+Example:
+{
+  "status": "NORMALIZATION_REQUIRED",
+  "version": 3,
+  "changes": {
+    "pincode": "500032"
+  },
+  "reason_codes": [
+    "UNICODE_DIGITS_CANONICALIZED"
+  ]
+}
+
+Application creates version 4.
+Then validates version 4.
+56. Do not loop forever
+Normalization must be idempotent.
+After applying:
+500032
+
+validating again must not produce another normalization proposal.
+Unit test this.
+57. Performance
+PIN lookup should be effectively constant-time.
+If using a loaded snapshot:
+dict[str, tuple[PostalRecord, ...]]
+
+
+is sufficient.
+The full India PIN directory is small enough that this is not a distributed-systems problem.
+Don't add Redis.
+58. Startup behavior
+When postal data loads:
+valid dataset
+→ validator ready
+
+If data is invalid/unavailable:
+validator NOT ready
+
+Do not run in a degraded mode that treats all addresses as valid.
+59. Health information
+Later APIs can expose something like:
+postal_validation_ready = true
+dataset_version = ...
+
+But that's 2D.
+2B only needs the internal readiness model.
+60. Security considerations
+Even though 2B has no API yet:
+- Do not log full addresses.
+- Do not log raw candidate objects.
+- Dataset-loader errors must not accidentally include customer data.
+- Postal reference data is not customer PII.
+- Validation error objects should use field/reason codes.
+- Preserve the 2A rule that structured schema error details may require redaction before being exposed by future APIs.
+61. Testing strategy
+Use:
+pytest
+
+and preserve all existing:
+Phase 1 tests
+Phase 2A tests
+
+2B completion requires the entire repository test suite to remain green.
+62. Required test groups
+At minimum:
+PIN normalization
+Unicode digits
+wrong-length PIN
+non-digit PIN
+unknown PIN
+
+required fields
+premise alternatives
+
+state comparison
+district comparison
+city non-equivalence
+
+postal ambiguity
+
+normalization version requirement
+
+provenance
+
+dataset loading
+
+stale version integration with 2A
+
+validation errors
+
+63. Critical regression test
+This test must exist:
+current v3
+↓
+validator proposes canonical normalization
+↓
+new version v4 created
+↓
+old validation/read-back/confirmation absent
+↓
+validate v4
+
+This proves normalization cannot bypass version semantics.
+64. Another critical test
+v3 validation request starts
+
+customer correction
+→ v4
+
+v3 validation returns VALID
+
+session rejects stale v3 result
+
+2A already guards this; 2B integration must preserve it.
+65. Data refresh is not part of 2B runtime
+Do not build a scheduler.
+For 2B, document a manual/import command such as conceptually:
+import_postal_dataset
+
+Automatic refresh belongs later if needed.
+66. Proposed developer utility
+Potentially:
+scripts/import_postal_data.py
+
+Responsibilities:
+read official downloaded dataset
+validate schema
+normalize reference fields
+compute checksum
+write deterministic local artifact
+record provenance
+
+It should not contain customer data.
+67. Source documentation
+Create:
+docs/postal-data.md
+
+Document:
+source
+Department of Posts
+
+distribution
+data.gov.in / India Post
+
+fields used
+PIN
+state
+district
+post-office metadata
+
+update cadence
+monthly according to OGD catalog
+
+download/import date
+
+checksum
+
+limitations
+not a complete consumer-locality/city truth source
+
+The official OGD catalog states that the PIN directory contains office/PIN/district/state and related postal hierarchy data and is updated monthly. Data.gov.in
+68. 2B code map
+Recommended:
+app/
+├── domain/
+│   └── existing 2A code
+│
+└── validation/
+    ├── __init__.py
+    ├── engine.py
+    ├── models.py
+    ├── normalization.py
+    ├── required_fields.py
+    ├── postal_directory.py
+    └── errors.py
+
+scripts/
+└── import_postal_data.py
+
+tests/
+├── unit/
+│   ├── test_validation_engine.py
+│   ├── test_required_fields.py
+│   ├── test_pincode_normalization.py
+│   ├── test_postal_directory.py
+│   └── test_validation_provenance.py
+│
+└── fixtures/
+    └── postal_directory.json
+
+docs/
+└── postal-data.md
+
+69. Phase 2B non-goals
+Do not implement:
+PostgreSQL
+SQLAlchemy persistence
+Alembic
+FastAPI
+authentication
+Bolna function calls
+webhooks
+geocoding
+Google Maps
+Redis
+queues
+background workers
+production deployment
+
+Those remain later milestones.
+70. 2B completion criteria
+Phase 2B is complete when:
+1. Required-field policy is deterministic.
+2. PIN canonicalization is deterministic.
+3. Unicode decimal digits are explicitly supported/tested.
+4. Canonical PIN is exactly six ASCII digits.
+5. Invalid/ambiguous PINs fail to clarification.
+6. Official postal data can be imported deterministically.
+7. Postal provenance is recorded.
+8. PIN existence is checked.
+9. State consistency is checked conservatively.
+10. District consistency is checked when supplied.
+11. City is not incorrectly equated with district/post-office name.
+12. Area is not incorrectly required to match postal office names.
+13. Missing postal knowledge is not treated as contradiction.
+14. Canonical changes require version transitions.
+15. Validation results bind to exact address versions.
+16. Stale validation cannot affect newer state.
+17. Validation infrastructure errors fail closed.
+18. No customer address data is unnecessarily logged.
+19. All new unit tests pass.
+20. All Phase 1 + 2A tests continue to pass.
+71. Status after completion
+If all of that passes:
+Phase 2A — COMPLETE
+Phase 2B — COMPLETE
+Phase 2C — NEXT
+Phase 2 overall — NOT COMPLETE
+
+And 2C will then introduce the real persistence boundary:
+PostgreSQL
+Alembic
+transactions
+optimistic concurrency
+immutable versions
+validation attempts
+save idempotency
+restart durability
+real DB concurrency tests
+
+That should be the next implementation milestone after this validation engine is proven.

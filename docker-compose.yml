@@ -1,0 +1,37 @@
+name: bolna-address
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: bolna_owner
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set in an explicit environment file}
+      POSTGRES_DB: bolna
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD:?set in an explicit environment file}
+    ports:
+      - "127.0.0.1:55432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/init.sql:/docker-entrypoint-initdb.d/01-role.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bolna_owner -d bolna"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+  backend:
+    build: .
+    environment:
+      DATABASE_URL: postgresql+psycopg://bolna_app:${APP_DB_PASSWORD}@postgres:5432/bolna
+      BOLNA_SERVICE_TOKEN: ${BOLNA_SERVICE_TOKEN:?set a random service token}
+      BOLNA_WEBHOOK_TOKEN: ${BOLNA_WEBHOOK_TOKEN:?set a separate webhook token}
+      EVIDENCE_ADAPTER_TOKEN: ${EVIDENCE_ADAPTER_TOKEN:?set a separate adapter token}
+      POSTAL_DATA_PATH: /postal/release.json
+      APP_ENV: production
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - ./local-data/postal:/postal:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+volumes:
+  postgres_data:

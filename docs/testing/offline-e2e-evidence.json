@@ -1,0 +1,313 @@
+{
+  "mode": "OFFLINE_BOLNA_SIMULATION",
+  "evidence_source": "SYNTHETIC",
+  "postal_source": "UNVERIFIED_OR_STALE",
+  "test_result": "PASS",
+  "conversation_outcome": null,
+  "completed_at": "2026-09-30T11:09:45.808767+00:00",
+  "session_id": "28b61ce5-f533-4d6c-9e6a-bb7611bc25ea",
+  "execution_id": "OFFLINE_BOLNA_SIMULATION-aada7287-cde6-4c67-9938-4b28886529c6",
+  "current_version": 6,
+  "validated_version": 6,
+  "confirmed_version": 6,
+  "normalization_observed": true,
+  "stale_reason": "EVIDENCE_BINDING_MISMATCH",
+  "old_version_reason": "VERSION_CONFLICT",
+  "premature_save_reason": "ADDRESS_NOT_CONFIRMED",
+  "address_id": "f96ef8df-8084-4ec0-a749-43071305572f",
+  "duplicate_address_id": "f96ef8df-8084-4ec0-a749-43071305572f",
+  "source_session_id": "28b61ce5-f533-4d6c-9e6a-bb7611bc25ea",
+  "source_version": 6,
+  "counts": {
+    "address_sessions": 1,
+    "address_versions": 6,
+    "validation_attempts": 2,
+    "readback_attempts": 2,
+    "confirmation_events": 2,
+    "addresses": 1,
+    "audit_events": 15
+  },
+  "timeline": [
+    {
+      "event": "Session created and execution bound",
+      "version": 0
+    },
+    {
+      "event": "Premise supplied",
+      "version": 1
+    },
+    {
+      "event": "Area supplied",
+      "version": 2
+    },
+    {
+      "event": "City/state supplied",
+      "version": 3
+    },
+    {
+      "event": "PIN supplied",
+      "version": 4
+    },
+    {
+      "event": "Validated with demo postal data",
+      "version": 5
+    },
+    {
+      "event": "Readback generated (TEXT ONLY)",
+      "version": 5
+    },
+    {
+      "event": "Correction; prior acceptance invalidated",
+      "version": 6
+    },
+    {
+      "event": "Old version confirmation rejected",
+      "version": 6
+    },
+    {
+      "event": "Validated with demo postal data",
+      "version": 6
+    },
+    {
+      "event": "Readback generated (TEXT ONLY)",
+      "version": 6
+    },
+    {
+      "event": "Old readback evidence rejected",
+      "version": 6
+    },
+    {
+      "event": "Premature save rejected",
+      "version": 6
+    },
+    {
+      "event": "SYNTHETIC READBACK_COMPLETED",
+      "version": 6
+    },
+    {
+      "event": "Stale confirmation binding rejected",
+      "version": 6
+    },
+    {
+      "event": "SYNTHETIC CUSTOMER_CONFIRMED",
+      "version": 6
+    },
+    {
+      "event": "Address committed to PostgreSQL",
+      "version": 6
+    },
+    {
+      "event": "Duplicate save idempotent",
+      "version": 6
+    }
+  ],
+  "requests": [
+    {
+      "request_id": "980f9045-adce-4399-b23f-8fc98035151a",
+      "operation": "address-sessions",
+      "http_status": 201,
+      "reason": null
+    },
+    {
+      "request_id": "1e1d36b1-1fbf-4df7-b8cc-320186f59c4b",
+      "operation": "execution",
+      "http_status": 200,
+      "reason": null
+    },
+    {
+      "request_id": "a38c2841-976d-4af3-923c-9b61349d3168",
+      "operation": "update_address",
+      "http_status": 200,
+      "reason": null
+    },
+    {
+      "request_id": "32c10440-4a0d-4a51-926a-60ce31813b95",
+      "operation": "update_address",
+      "http_status": 200,
+      "reason": null
+    },
+    {
+      "request_id": "6ca35e91-31bd-487a-9cbc-100e8a788bb0",
+      "operation": "update_address",
+      "http_status": 200,
+      "reason": null
+    },
+    {
+      "request_id": "a98860a4-f93c-4432-80fa-6b536ec88f89",
+      "operation": "update_address",
+      "http_status": 200,
+      "reason": null
+    },
+    {
+      "request_id": "d1c69b3d-89f7-4f9e-9497-6ededa510f9d",
+      "operation": "validate_address",
+      "http_status": 200,
+      "reason": null
+    },
+    {
+      "request_id": "8c84f968-4c44-46b2-85fe-ef3f230563e6",
+      "operation": "prepare_address_readback",
+      "http_status": 200,
+      "reason": null
+    },
+    {
+      "request_id": "f8528783-17be-42dd-9138-c038b945cf3d",
+      "operation": "update_address",
+      "http_status": 200,
+      "reason": null
+    },
+    {
+      "request_id": "faaf2fa8-58e6-4846-8dd8-0a53dc1434f2",
+      "operation": "evidence",
+      "http_status": 409,
+      "reason": "VERSION_CONFLICT"
+    },
+    {
+      "request_id": "8d55711d-0db7-4b8a-a7b6-9a6fb2b0c2ab",
+      "operation": "validate_address",
+      "http_status": 200,
+      "reason": null
+    },
+    {
+      "request_id": "fb61f89f-d0d6-49c1-a179-2890479b95e0",
+      "operation": "prepare_address_readback",
+      "http_status": 200,
+      "reason": null
+    },
+    {
+      "request_id": "3e2fdc49-c3a2-4c26-a58c-c7ff2b1e61b9",
+      "operation": "evidence",
+      "http_status": 409,
+      "reason": "EVIDENCE_BINDING_MISMATCH"
+    },
+    {
+      "request_id": "e6089f94-5faf-4d13-8425-d232711e7002",
+      "operation": "save_address",
+      "http_status": 409,
+      "reason": "ADDRESS_NOT_CONFIRMED"
+    },
+    {
+      "request_id": "8fa8827d-9401-415c-874a-64f88c8eea10",
+      "operation": "evidence",
+      "http_status": 200,
+      "reason": null
+    },
+    {
+      "request_id": "5f4be8ce-0dcb-4145-8ad2-e20ae9150903",
+      "operation": "evidence",
+      "http_status": 409,
+      "reason": "EVIDENCE_BINDING_MISMATCH"
+    },
+    {
+      "request_id": "364961c2-c9a1-47f3-9de6-26e5b40e81ab",
+      "operation": "evidence",
+      "http_status": 200,
+      "reason": null
+    },
+    {
+      "request_id": "1d9e9ad9-eea1-4367-a6ad-cfb0de4a1583",
+      "operation": "save_address",
+      "http_status": 200,
+      "reason": null
+    },
+    {
+      "request_id": "31dc4840-f689-4d4b-952d-22dcaa07ff57",
+      "operation": "save_address",
+      "http_status": 200,
+      "reason": null
+    }
+  ],
+  "readbacks": [
+    {
+      "id": "6d277cc6-206d-4353-8cc9-a2593c2ce02a",
+      "validation_attempt_id": "882253c4-2be9-4058-93e0-c6a4db169284",
+      "version": 5,
+      "text_digest": "2f5974fa79715002ed98f3ddb058a892981dd3df0cd777bf5606e0a97459b071",
+      "rendered_text": "House or flat B-302; area Connaught Place; city New Delhi; state Delhi; PIN 1, 1, 0, 0, 0, 1. Is this full address correct?"
+    },
+    {
+      "id": "ddb55ee2-3e4b-4aae-9961-3c2af892b004",
+      "validation_attempt_id": "c0c6e0ea-48e1-4b6a-83ba-5b2abc6a402d",
+      "version": 6,
+      "text_digest": "da71c44818703f9dd1c3e4d4bf282173d10c833b5d3e43a31da6781fb3fa9af4",
+      "rendered_text": "House or flat B-320; area Connaught Place; city New Delhi; state Delhi; PIN 1, 1, 0, 0, 0, 1. Is this full address correct?"
+    }
+  ],
+  "audit": [
+    {
+      "operation": "SESSION_CREATED",
+      "version": 0,
+      "sequence": 1
+    },
+    {
+      "operation": "EXECUTION_BOUND",
+      "version": 0,
+      "sequence": 2
+    },
+    {
+      "operation": "CANDIDATE_UPDATED",
+      "version": 1,
+      "sequence": 3
+    },
+    {
+      "operation": "CANDIDATE_UPDATED",
+      "version": 2,
+      "sequence": 4
+    },
+    {
+      "operation": "CANDIDATE_UPDATED",
+      "version": 3,
+      "sequence": 5
+    },
+    {
+      "operation": "CANDIDATE_UPDATED",
+      "version": 4,
+      "sequence": 6
+    },
+    {
+      "operation": "CANONICAL_NORMALIZED",
+      "version": 5,
+      "sequence": 7
+    },
+    {
+      "operation": "VALIDATION_RECORDED",
+      "version": 5,
+      "sequence": 8
+    },
+    {
+      "operation": "READBACK_PREPARED",
+      "version": 5,
+      "sequence": 9
+    },
+    {
+      "operation": "CANDIDATE_UPDATED",
+      "version": 6,
+      "sequence": 10
+    },
+    {
+      "operation": "VALIDATION_RECORDED",
+      "version": 6,
+      "sequence": 11
+    },
+    {
+      "operation": "READBACK_PREPARED",
+      "version": 6,
+      "sequence": 12
+    },
+    {
+      "operation": "READBACK_COMPLETED",
+      "version": 6,
+      "sequence": 13
+    },
+    {
+      "operation": "CONFIRMED",
+      "version": 6,
+      "sequence": 14
+    },
+    {
+      "operation": "SAVE_RECORDED",
+      "version": 6,
+      "sequence": 15
+    }
+  ]
+}

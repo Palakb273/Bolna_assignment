@@ -1,0 +1,124 @@
+{
+  "agent_config": {
+    "agent_name": "Address Collector - Phase 1",
+    "agent_type": "other",
+    "agent_welcome_message": "Hi, I'm calling to confirm your address. Is now a good time?",
+    "call_summary_enabled": false,
+    "tasks": [
+      {
+        "task_type": "conversation",
+        "toolchain": {
+          "execution": "sequential",
+          "pipelines": [
+            [
+              "transcriber",
+              "llm",
+              "synthesizer"
+            ]
+          ]
+        },
+        "tools_config": {
+          "llm_agent": {
+            "agent_type": "simple_llm_agent",
+            "agent_flow_type": "streaming",
+            "llm_config": {
+              "provider": "openai",
+              "model": "gpt-4.1",
+              "temperature": 0.2,
+              "max_tokens": 400
+            }
+          },
+          "transcriber": {
+            "provider": "sarvam",
+            "model": "saaras:v4",
+            "language": "en",
+            "stream": true,
+            "endpointing": 500
+          },
+          "synthesizer": {
+            "provider": "sarvam",
+            "provider_config": {
+              "voice": "Priya",
+              "voice_id": "priya",
+              "model": "bulbul:v3",
+              "language": "en",
+              "speed": 0.95
+            },
+            "stream": true,
+            "buffer_size": 150
+          },
+          "input": {
+            "provider": "plivo",
+            "format": "wav"
+          },
+          "output": {
+            "provider": "plivo",
+            "format": "wav"
+          },
+          "multilingual_config": {
+            "enabled": true,
+            "active_language": "en",
+            "language_switch_trigger": "requested_or_auto_detected",
+            "languages": {
+              "en": {
+                "transcriber": {
+                  "language": "en"
+                },
+                "synthesizer": {
+                  "provider": "sarvam",
+                  "provider_config": {
+                    "voice": "Priya",
+                    "voice_id": "priya",
+                    "model": "bulbul:v3",
+                    "language": "en",
+                    "speed": 0.95
+                  }
+                }
+              },
+              "hi": {
+                "transcriber": {
+                  "language": "hi"
+                },
+                "synthesizer": {
+                  "provider": "sarvam",
+                  "provider_config": {
+                    "voice": "Priya",
+                    "voice_id": "priya",
+                    "model": "bulbul:v3",
+                    "language": "hi",
+                    "speed": 0.95
+                  }
+                }
+              }
+            }
+          }
+        },
+        "task_config": {
+          "number_of_words_for_interruption": 1,
+          "incremental_delay": 500,
+          "hangup_after_silence": 20,
+          "check_if_user_online": true,
+          "trigger_user_online_message_after": 12,
+          "check_user_online_message": {
+            "en": "Hello, are you still there?",
+            "hi": "क्या आप अभी भी लाइन पर हैं?"
+          },
+          "call_terminate": 300,
+          "hangup_after_LLMCall": true,
+          "call_cancellation_prompt": "End only when the latest full address has been read back without interruption and explicitly confirmed with no correction or uncertainty, or the customer is busy, refuses, asks for a human, explicitly ends the call, or cannot provide essential details and has agreed to stop. Never end on yes to availability, an individual field, an incomplete read-back, an uncertain answer, or a correction. Allow the assistant to acknowledge the outcome before ending. If the user interrupts the goodbye to correct a field, cancel completion and require a fresh full read-back and confirmation.",
+          "call_hangup_message": {
+            "en": "Thank you for your time. I'll end the call now.",
+            "hi": "आपके समय के लिए धन्यवाद। अब कॉल समाप्त करती हूँ।"
+          },
+          "interruptible_hangup_message": true,
+          "backchanneling": false,
+          "ambient_noise": false,
+          "auto_reschedule": false,
+          "voicemail": false
+        }
+      }
+    ]
+  },
+  "agent_prompts": {}
+}
+

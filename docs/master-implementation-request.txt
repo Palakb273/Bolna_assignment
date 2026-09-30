@@ -1,0 +1,1315 @@
+MASTER IMPLEMENTATION PROMPT — BOLNA AI ADDRESS COLLECTION SYSTEM
+You are a senior backend, AI-agent, voice-AI, security, and QA engineer.
+You are taking over an existing repository containing a partially implemented Bolna-powered address collection system.
+Your task is to finish the complete project end-to-end in this session, using the existing implementation as the starting point.
+Do not restart the project.
+Do not throw away working Phase 1, Phase 2A, or Phase 2B code.
+Inspect the repository first, understand what exists, run all current tests, and continue from there.
+The user has a deadline. Optimize for a working, testable, defensible final system, not endless planning.
+Do not stop after writing another design document.
+Implement the system.
+1. FINAL PRODUCT
+Build a voice AI system that:
+Calls a customer through Bolna, conversationally collects their Indian address in English/Hindi/Hinglish, handles interruptions and corrections, converts the conversation into deterministic structured address state, validates the address using postal data, reads the exact current address back to the customer, obtains confirmation for that exact version, and stores the confirmed address safely.
+
+Final user flow:
+Customer
+   ↓
+Bolna voice call
+   ↓
+Address information spoken
+   ↓
+Structured candidate address
+   ↓
+Backend address session
+   ↓
+Validation
+   ↓
+Missing/conflicting?
+   ├── YES → agent asks targeted question
+   │             ↓
+   │        update candidate
+   │             ↓
+   │          validate
+   │
+   └── NO
+         ↓
+Full address read-back
+         ↓
+Customer confirms/corrects
+         ↓
+If correction:
+new version → revalidate → reread → reconfirm
+         ↓
+Confirmed current version
+         ↓
+Persist address
+         ↓
+Call completes
+
+2. CORE ARCHITECTURE
+Target architecture:
+                       CUSTOMER
+                           │
+                           ▼
+                    ┌─────────────┐
+                    │    BOLNA    │
+                    │             │
+                    │ Telephony   │
+                    │ STT         │
+                    │ LLM         │
+                    │ TTS         │
+                    │ Barge-in    │
+                    └──────┬──────┘
+                           │
+                       Tool calls
+                           │
+                           ▼
+                    ┌─────────────┐
+                    │   FastAPI   │
+                    │   Backend   │
+                    └──────┬──────┘
+                           │
+          ┌────────────────┼─────────────────┐
+          │                │                 │
+          ▼                ▼                 ▼
+     Domain State      Validation       PostgreSQL
+                        Engine
+                           │
+                           ▼
+                    Postal Directory
+
+Bolna owns:
+phone calls
+audio
+STT
+TTS
+conversation
+barge-in
+language handling
+tool invocation
+
+Our backend owns:
+address state
+versions
+validation
+normalization
+confirmation eligibility
+postal validation
+session ownership
+persistence
+audit trail
+security
+webhooks
+
+Critical architectural principle:
+Bolna manages conversation. The backend manages truth.
+
+3. EXISTING IMPLEMENTATION — DO NOT REBUILD
+The repository already contains substantial work.
+Inspect and preserve it.
+Current state includes approximately:
+Voice prototype
+Bolna hosted agent exists and has successfully made development calls.
+It supports:
+English
+Hindi
+Hinglish
+address collection
+read-back
+basic confirmation
+barge-in configuration
+
+There are helper scripts for:
+Bolna agent creation
+test-call creation
+safe HTTP requests
+
+Existing Phase 1 helper tests must continue passing.
+Deterministic domain layer
+Phase 2A is implemented.
+It includes:
+strict address schemas
+immutable address versions
+candidate updates
+optimistic expected_version checks
+validation binding
+read-back attempts
+confirmation evidence model
+save eligibility
+audit events
+correction invalidation
+
+Important invariant already implemented:
+current_version
+==
+validated_version
+==
+confirmed_version
+
+is required for save eligibility.
+Do NOT weaken it.
+Confirmation evidence
+The current design intentionally fails closed.
+The LLM must not be able to manufacture confirmation simply by sending:
+{
+  "confirmed": true
+}
+
+Existing domain logic binds confirmation to:
+session
+execution
+address version
+validation attempt
+read-back attempt
+text digest
+ordered evidence
+
+Keep this design.
+If a production-grade independent Bolna playback/consent signal is unavailable, do not silently invent one.
+Provide a clearly separated integration adapter and document the limitation.
+Phase 2B validation engine
+Existing implementation includes:
+PIN normalization
+Unicode decimal handling
+required address checks
+state/district postal comparison
+city/area conservative handling
+field origins
+raw/canonical preservation
+postal derivation invalidation
+dataset freshness/readiness
+provenance
+postal importer
+
+Synthetic tests already exist.
+Do not replace them.
+Extend them where needed.
+4. FINAL TECHNOLOGY STACK
+Use:
+Python 3.11+
+FastAPI
+Pydantic v2
+SQLAlchemy 2
+PostgreSQL
+Alembic
+pytest
+httpx
+Bolna API / custom tools
+
+Optional for development:
+Docker Compose
+
+Do NOT introduce unless genuinely required:
+Kafka
+Kubernetes
+Celery
+RabbitMQ
+Redis
+microservices
+
+This should remain a clean modular monolith.
+5. CANONICAL ADDRESS MODEL
+Preserve the existing nine-field address schema:
+{
+  "house_flat": null,
+  "building": null,
+  "street": null,
+  "area": null,
+  "landmark": null,
+  "city": null,
+  "district": null,
+  "state": null,
+  "pincode": null
+}
+
+Unknown fields must be rejected.
+Values remain strings.
+PIN must remain a string.
+6. RAW VS CANONICAL ADDRESS
+Preserve both where applicable.
+Example:
+Customer input:
+५०० ०३२
+
+Raw:
+५०० ०३२
+
+Canonical:
+500032
+
+Never destroy the customer representation during normalization.
+7. FIELD ORIGINS
+Preserve origin metadata.
+At minimum:
+CUSTOMER
+CUSTOMER_NORMALIZED
+POSTAL_DATA
+
+Example:
+house_flat = B-302
+origin = CUSTOMER
+
+pincode = 500032
+origin = CUSTOMER_NORMALIZED
+
+state = Telangana
+origin = POSTAL_DATA
+
+If the field that produced a derived field changes, invalidate the dependent derived field.
+Example:
+PIN changes
+→ postal-derived state removed/recomputed
+→ postal-derived district removed/recomputed
+
+Do not delete customer-supplied state merely because PIN changed.
+Instead revalidate it.
+8. ADDRESS VERSIONING
+Every meaningful change creates an immutable version.
+Example:
+v1:
+Flat 302
+
+customer:
+"Actually 320"
+
+v2:
+Flat 320
+
+A changed candidate must clear:
+validated_version
+confirmed_version
+current accepted read-back
+save eligibility
+
+An identical update should be an idempotent no-op.
+9. NORMALIZATION
+Normalization must also be versioned.
+Never silently change:
+v3 pincode = "५०००३२"
+
+into:
+v3 pincode = "500032"
+
+Instead:
+v3
+ ↓
+NormalizationProposal
+ ↓
+v4
+
+v4 contains canonical representation while preserving raw representation.
+Normalization proposals must bind to:
+session
+base version
+base snapshot
+policy
+provenance
+
+Stale proposals must fail.
+10. PIN RULES
+Canonical PIN:
+exactly six ASCII digits
+
+Allow deterministic normalization only for explicitly supported input:
+Unicode decimal digits
+explicitly allowed spacing
+
+Reject:
+letters
+O substituted for 0
+superscripts
+zero-width characters
+unsupported punctuation
+arbitrary compatibility characters
+
+Example:
+"५०००३२"
+→ normalization proposal → "500032"
+
+but:
+"500O32"
+→ NEEDS_CLARIFICATION
+
+Never guess O vs zero.
+11. POSTAL VALIDATION
+Use conservative rules.
+Strong evidence:
+PIN existence
+PIN → state
+PIN → supported districts
+
+Weak/incomplete evidence:
+consumer city
+neighborhood
+locality
+society name
+landmark
+
+Never assume:
+district == city
+
+Never require:
+area == post office name
+
+12. VALIDATION STATUSES
+Keep exactly the existing three domain statuses:
+VALID
+NEEDS_CLARIFICATION
+VALIDATION_ERROR
+
+Normalization is NOT a validation status.
+The engine returns either:
+NormalizationProposal
+
+or:
+ValidationResult
+
+13. NEEDS_CLARIFICATION
+Use for recoverable customer/input problems:
+missing premise
+missing area
+missing city
+missing PIN
+PIN malformed
+PIN wrong length
+PIN not found
+customer state conflicts with postal data
+customer district conflicts with all supported districts
+
+14. VALIDATION_ERROR
+Use when our validation evidence/system itself is unreliable:
+postal directory unavailable
+postal dataset corrupt
+missing provenance
+expired authoritative data
+contradictory authoritative states
+checksum mismatch
+internal validator failure
+
+Never tell the customer their address is invalid because our infrastructure failed.
+15. PREMISE POLICY
+Do not consider a building alone sufficient.
+This:
+Galaxy Apartments
+
+does not identify one customer's premises.
+Default requirement:
+house_flat / premise identifier required
+
+The existing house_flat field may contain a customer-supplied alternative identifying description if no formal number exists.
+Examples:
+Flat B-302
+House 17
+Shop 4
+Sharma Medical Store ground floor
+House beside Government School
+
+Landmark alone must not satisfy premise identification.
+16. POSTAL DATA
+There is currently an uploaded/available postal CSV that may contain stale/unverified data.
+Treat unverified files explicitly as:
+UNVERIFIED_OR_STALE
+
+They may be used for:
+importer mechanics
+header parsing
+malformed-row tests
+lookup mechanics
+
+They must not automatically become authoritative production evidence.
+17. POSTAL PROVENANCE
+For trusted official postal files, retain:
+source organization
+official resource URL
+official resource ID
+source release/update date
+retrieval timestamp
+original file SHA-256
+normalized artifact SHA-256
+source_kind
+
+Important:
+SHA-256 = integrity/identity
+
+NOT:
+SHA-256 = authenticity
+
+18. POSTAL FRESHNESS
+Freshness must depend on:
+source release date
+vs
+evaluation date
+
+NOT import date.
+Use configurable:
+MAX_POSTAL_SOURCE_AGE_DAYS
+
+Inject evaluation time in tests.
+19. POSTAL DIRECTORY TRUST
+Production runtime activation must require:
+source_kind == OFFICIAL_POSTAL_DIRECTORY
+
+AND provenance complete
+
+AND source release date known
+
+AND freshness passes
+
+AND dataset fully parsed
+
+AND hashes verified
+
+AND readiness true
+
+Synthetic and unverified datasets must never become production directories.
+20. DATABASE
+Now implement PostgreSQL persistence.
+Use SQLAlchemy 2 and Alembic.
+Create at least:
+customers
+id
+external_id
+name
+phone
+created_at
+updated_at
+
+address_sessions
+id
+customer_id
+bolna_execution_id
+status
+
+current_version
+validated_version
+confirmed_version
+
+created_at
+updated_at
+completed_at
+
+address_versions
+id
+session_id
+version
+
+raw_address
+canonical_address
+field_origins
+
+created_at
+
+Use appropriate JSONB where useful.
+Enforce:
+UNIQUE(session_id, version)
+
+validation_attempts
+id
+attempt_id
+session_id
+address_version
+
+status
+reason_codes
+missing_fields
+conflicts
+warnings
+
+policy_version
+field_origins
+postal_provenance
+
+created_at
+
+readback_attempts
+id
+attempt_id
+session_id
+execution_id
+address_version
+validation_attempt_id
+
+rendered_text
+text_digest
+
+status
+prepared_at
+completed_at
+interrupted_at
+
+confirmation_events
+id
+evidence_id
+session_id
+execution_id
+address_version
+validation_attempt_id
+readback_attempt_id
+
+outcome
+source
+source_sequence
+
+observed_at
+
+addresses
+Final accepted records:
+id
+customer_id
+source_session_id
+source_version
+
+canonical_address
+
+confirmed_at
+superseded_at
+
+created_at
+updated_at
+
+Add uniqueness such that repeated saves for the same:
+source_session_id
++
+source_version
+
+do not create duplicate addresses.
+call_events
+id
+event_id
+session_id
+execution_id
+event_type
+event_timestamp
+metadata
+created_at
+
+Do not dump unnecessary PII into metadata.
+21. TRANSACTIONS
+Every state transition affecting persistence should happen transactionally.
+Use optimistic concurrency.
+Example update:
+expected_version = 4
+
+If DB current version != 4:
+409 VERSION_CONFLICT
+
+No partial state mutation.
+22. SAVE TRANSACTION
+Saving requires server-side independent check:
+current_version
+==
+validated_version
+==
+confirmed_version
+
+plus accepted read-back/confirmation evidence.
+Then:
+BEGIN
+
+verify state
+insert/get idempotent address
+mark current accepted record
+supersede old accepted address if necessary
+record audit event
+
+COMMIT
+
+Only after commit can backend report:
+ADDRESS_SAVED
+
+23. FASTAPI API
+Implement a versioned API:
+/v1
+
+Required endpoints:
+Session creation
+POST /v1/address-sessions
+
+Privileged/internal operation.
+Get session
+GET /v1/address-sessions/{session_id}
+
+Do not expose unnecessary PII.
+Candidate update
+PATCH /v1/address-sessions/{session_id}/candidate
+
+Example:
+{
+  "expected_version": 3,
+  "changes": {
+    "house_flat": "B-302"
+  }
+}
+
+Validation
+POST /v1/address-sessions/{session_id}/validate
+
+Runs the real validator.
+Prepare read-back
+POST /v1/address-sessions/{session_id}/readback
+
+Returns the exact rendered text and attempt ID/digest.
+Record trusted read-back completion
+Internal/trusted adapter route, not LLM-controlled public route.
+Confirmation request / evidence processing
+Keep the existing strict evidence model.
+Do not expose:
+confirmed=true
+
+as sufficient evidence.
+Save
+POST /v1/address-sessions/{session_id}/save
+
+Must independently enforce all guards.
+24. AUTHENTICATION
+Implement service-to-service authentication.
+Bolna tool endpoints must not be unauthenticated public mutation endpoints.
+At minimum use a securely configured bearer service credential or signed mechanism supported by the current Bolna tool configuration.
+Secrets from environment only.
+Never commit credentials.
+25. AUTHORIZATION / OWNERSHIP
+Do not trust arbitrary:
+session_id
+customer_id
+execution_id
+
+provided by an LLM.
+Bind authenticated call principal/execution to:
+stored session
+customer
+Bolna execution
+
+Server verifies relationship before updates.
+Prevent IDOR.
+26. BOLNA INTEGRATION
+Use the existing hosted Bolna agent.
+Do not recreate it unnecessarily.
+Add custom tools for the backend workflow.
+Exact tool set may depend on current implementation, but logically provide:
+update_address
+validate_address
+prepare_address_readback
+request_address_confirmation / confirmation adapter
+save_address
+
+Do not give the LLM direct database access.
+27. BOLNA TOOL BEHAVIOR
+Example:
+Customer:
+"Flat 302, Galaxy Apartments, Gachibowli, Hyderabad, 500032."
+
+Agent extracts fields and calls:
+update_address()
+
+Then:
+validate_address()
+
+If backend says:
+NEEDS_CLARIFICATION
+PINCODE_WRONG_LENGTH
+
+agent asks only:
+“Could you repeat the six-digit PIN code digit by digit?”
+
+28. VALID RESULT
+If backend says:
+VALID
+
+agent requests read-back text from backend.
+Do not let the LLM independently construct a subtly different address when possible.
+Backend-generated read-back should correspond to the exact validated version.
+Example:
+Flat B-302, Galaxy Apartments, Gachibowli,
+Hyderabad, Telangana, PIN 5-0-0-0-3-2.
+
+29. CORRECTION
+If during read-back customer says:
+“No, flat 320.”
+
+Then:
+read-back attempt interrupted
+↓
+candidate patch B-302 → B-320
+↓
+new version
+↓
+old validation invalid
+↓
+old confirmation invalid
+↓
+validate new version
+↓
+prepare new full read-back
+↓
+fresh confirmation
+
+Never retain the previous confirmation.
+30. AFFIRMATIVE WITH CORRECTION
+Critical case:
+Customer:
+“Yes, but the flat is 320.”
+
+This is:
+CORRECTION
+
+not:
+CONFIRMATION
+
+Apply correction and reread complete address.
+31. WEBHOOKS
+Implement:
+POST /v1/webhooks/bolna
+
+Verify webhook authenticity using whatever current Bolna supports.
+Do not assume tool auth == webhook auth.
+Handle:
+call started
+connected
+completed
+failed
+
+Call completion must NOT imply address confirmation.
+32. WEBHOOK IDEMPOTENCY
+If Bolna provides stable event IDs:
+UNIQUE(event_id)
+
+Otherwise derive/document a deterministic event fingerprint.
+Duplicate webhook must not duplicate state changes.
+Out-of-order statuses must not move a terminal call backwards.
+33. BOLNA EXECUTION LINKAGE
+Every address session must be linked to the corresponding Bolna execution/call.
+Never allow an agent to modify a session belonging to a different execution.
+34. READ-BACK EVIDENCE LIMITATION
+The previous design intentionally requires trustworthy evidence that:
+exact text was played
++
+customer subsequently explicitly approved it
+
+Current public Bolna integration may not expose an independently trustworthy event proving this.
+Do NOT fabricate such capability.
+Implement an adapter interface.
+For development, clearly separate:
+Synthetic/Test Evidence Adapter
+
+from:
+Production Evidence Adapter
+
+Production must fail closed if trustworthy evidence cannot be established.
+For a deadline/demo, provide a documented development mode only if it already exists in the approved design and make it impossible to confuse with production trust.
+Never silently weaken save policy.
+35. ADDRESS READ-BACK
+Use deterministic rendering.
+English renderer exists.
+Add at least basic Hindi/Hinglish-compatible rendering if needed for the actual agent configuration.
+PIN must always be rendered digit by digit.
+Read back all customer-provided optional fields that are part of the current canonical address.
+36. LOGGING
+Implement structured logging.
+Log:
+request ID
+session ID
+execution ID
+operation
+version
+status
+reason codes
+latency
+
+Do not log:
+Authorization headers
+API keys
+DB passwords
+entire raw addresses
+whole transcripts
+full PII payloads
+
+37. ERROR MODEL
+Use consistent structured errors.
+Examples:
+SESSION_NOT_FOUND
+VERSION_CONFLICT
+ADDRESS_INCOMPLETE
+PINCODE_WRONG_LENGTH
+PINCODE_NOT_FOUND
+STATE_PINCODE_CONFLICT
+VALIDATION_ERROR
+READBACK_NOT_COMPLETED
+CONFIRMATION_REQUIRED
+CONFIRMATION_STALE
+SAVE_NOT_ELIGIBLE
+UNAUTHORIZED
+FORBIDDEN
+BACKEND_UNAVAILABLE
+
+38. HTTP STATUS MAPPING
+Use sensible codes:
+400 malformed request
+401 missing/invalid authentication
+403 ownership violation
+404 resource not found
+409 version/state conflict
+422 semantic validation failure where appropriate
+503 validator/database unavailable
+
+39. SECURITY
+Perform implementation and tests for:
+authentication bypass
+IDOR
+session ownership
+malformed JSON
+oversized fields
+unknown fields
+SQL injection attempts
+header injection
+replay
+stale versions
+duplicate requests
+secret exposure
+PII logs
+
+Use parameterized SQLAlchemy only.
+40. RATE LIMITING
+Add reasonable rate limiting if straightforward.
+At minimum ensure mutation endpoints cannot trivially be abused.
+Do not introduce Redis solely for rate limiting under the deadline unless necessary.
+An in-process/dev implementation can be documented as non-production if needed.
+41. DATABASE SECURITY
+Use a dedicated database role.
+Application should not use PostgreSQL superuser.
+Set:
+least privileges
+foreign keys
+unique constraints
+NOT NULL where appropriate
+
+42. MIGRATIONS
+Use Alembic.
+Provide:
+initial schema migration
+upgrade command
+downgrade/rollback
+
+Test migrations on actual PostgreSQL.
+Do not use SQLite as proof of PostgreSQL behavior.
+43. DOCKER DEVELOPMENT
+If useful, provide:
+docker-compose.yml
+
+with:
+PostgreSQL
+backend
+
+Do not containerize Bolna.
+Provide one-command local startup if practical.
+44. HEALTH ENDPOINTS
+Implement:
+GET /health/live
+GET /health/ready
+
+Readiness should check:
+database
+validator/postal directory readiness
+required configuration
+
+If trusted postal validation isn't ready:
+ready = false
+
+for production mode.
+45. CONFIGURATION
+Use environment variables.
+Provide .env.example.
+Never overwrite an existing .env.
+Example:
+DATABASE_URL=
+BOLNA_API_KEY=
+BOLNA_AGENT_ID=
+BOLNA_SERVICE_TOKEN=
+POSTAL_DATA_PATH=
+POSTAL_SOURCE_KIND=
+MAX_POSTAL_SOURCE_AGE_DAYS=
+APP_ENV=
+
+Do not put secrets in .env.example.
+46. EXISTING .ENV
+The repository may already contain .env.
+Do not print it.
+Do not overwrite it.
+Do not include it in reports.
+47. AUTOMATED TESTING
+Maintain all existing tests.
+Add comprehensive tests.
+Required categories:
+domain
+validator
+repository
+database
+API
+authentication
+ownership
+Bolna tool contracts
+webhooks
+security
+reliability
+
+48. DATABASE TESTS
+Use real PostgreSQL.
+Test:
+migrations
+restart durability
+foreign keys
+unique constraints
+concurrent candidate update
+concurrent saves
+stale version
+duplicate saves
+rollback
+
+49. API TESTS
+Test complete workflow:
+create session
+→ update candidate
+→ normalize
+→ validate
+→ prepare read-back
+→ confirmation evidence
+→ save
+→ retrieve final address
+
+50. CORRECTION TEST
+Mandatory:
+current=3
+validated=3
+confirmed=3
+
+customer correction
+↓
+current=4
+validated=null
+confirmed=null
+
+validate 4
+↓
+validated=4
+confirmed=null
+
+fresh confirmation
+↓
+confirmed=4
+
+save succeeds
+
+51. STALE CONFIRMATION TEST
+current=4
+validated=4
+confirmed=3
+
+Save must fail.
+52. CONCURRENT UPDATE TEST
+Two requests:
+expected_version=3
+
+Only one may create version 4.
+The other receives:
+409 VERSION_CONFLICT
+
+53. DUPLICATE SAVE TEST
+Saving the same confirmed session/version twice:
+first → creates address
+second → returns same address
+
+No duplicate database row.
+54. WEBHOOK TESTS
+Test:
+duplicate event
+out-of-order event
+unknown session
+wrong execution
+invalid authentication
+malformed payload
+
+55. FAILURE TESTS
+Test:
+PostgreSQL unavailable
+postal directory unavailable
+postal directory expired
+Bolna tool timeout
+validation failure
+transaction rollback
+save commit failure
+
+Never claim success on failure.
+56. PRODUCT/VOICE TESTING
+Reconnect the backend to the Bolna agent.
+Run real development calls for at least the highest-risk scenarios:
+happy path
+progressive address
+full address first turn
+PIN with zeros
+Hindi
+Hinglish
+correction
+barge-in
+correction during confirmation
+"yes, but..."
+difficult building name
+silence
+refusal
+busy
+human request
+backend failure
+
+For each capture separately:
+conversation_outcome
+backend_outcome
+test_result
+
+Do not conflate them.
+57. EXAMPLE
+Customer says:
+“Flat B-302, Galaxy Apartments, Gachibowli, Hyderabad, five zero zero zero three two.”
+
+Expected backend:
+{
+  "house_flat": "B-302",
+  "building": "Galaxy Apartments",
+  "area": "Gachibowli",
+  "city": "Hyderabad",
+  "pincode": "500032"
+}
+
+Validate.
+If state is safely derivable:
+state = Telangana
+origin = POSTAL_DATA
+
+Then read back exact canonical address.
+Customer says:
+“Yes.”
+
+Only valid trusted confirmation evidence may establish confirmation.
+Then save.
+58. OBSERVABILITY
+Provide enough information to answer:
+What happened during call X?
+
+For any execution we should be able to trace:
+Bolna execution
+↓
+address session
+↓
+v1
+↓
+v2
+↓
+validation attempt
+↓
+read-back
+↓
+correction
+↓
+v3
+↓
+validation
+↓
+confirmation
+↓
+saved address
+
+without exposing unnecessary PII in application logs.
+59. AUDIT TRAIL
+Audit events should capture:
+operation
+session
+version
+attempt/reference IDs
+reason codes
+timestamps
+actor/source
+
+Do not duplicate entire address values in general audit metadata.
+60. DOCUMENTATION
+Finish:
+README.md
+docs/architecture.md
+docs/api.md
+docs/bolna-integration.md
+docs/postal-data.md
+docs/security.md
+docs/testing.md
+docs/operations.md
+docs/final-report.md
+
+README should provide exact commands for:
+install
+PostgreSQL startup
+migrations
+backend startup
+tests
+Bolna configuration
+test call
+
+61. FINAL REPORT
+Create a final report containing:
+A. Final architecture
+B. What exists
+C. What was tested
+D. Test counts/results
+E. Postal dataset status
+F. Bolna integration status
+G. Database status
+H. Security testing
+I. Real voice testing
+J. Known limitations
+K. Production blockers
+L. How to demo the system
+Do not fabricate results.
+62. DEADLINE PRIORITY
+The user has limited time.
+Prioritize in this order:
+MUST SHIP
+PostgreSQL persistence
+FastAPI backend
+address sessions
+versioning
+validation integration
+Bolna tool integration
+correction behavior
+confirmation guard
+save endpoint
+real end-to-end demo call
+tests
+README
+
+SHOULD SHIP
+webhooks
+official postal dataset
+security tests
+Docker Compose
+audit events
+health endpoints
+
+NICE TO HAVE
+advanced rate limiting
+additional languages
+UI/dashboard
+background jobs
+advanced geocoding
+
+Do not spend deadline time building nice-to-have features while the end-to-end call is broken.
+63. NO FRONTEND REQUIRED
+Unless one already exists, do not build a React/Next.js dashboard just for appearance.
+The product can be demonstrated using:
+Bolna phone call
++
+FastAPI
++
+PostgreSQL
++
+API docs
++
+database inspection
++
+test report
+
+That is enough.
+64. WORKING DEMO DEFINITION
+A successful final demo is:
+1. Start backend.
+2. PostgreSQL is connected.
+3. Create/link address session.
+4. Trigger Bolna call.
+5. Customer gives address.
+6. Backend receives structured updates.
+7. Validator runs.
+8. Agent asks missing information if required.
+9. Agent reads exact final address.
+10. Customer corrects something.
+11. Backend creates a new version.
+12. Old confirmation is invalid.
+13. Agent rereads corrected address.
+14. Customer confirms.
+15. Backend save succeeds.
+16. Final address is visible in PostgreSQL/API.
+17. Audit history shows how it got there.
+If that works, the core project works.
+65. IMPORTANT — DO NOT GET STUCK PLANNING
+You may inspect and plan briefly before coding.
+Do not keep producing design documents and asking for approval after every module.
+Use the requirements in this prompt as approval to continue through the full implementation.
+Make reasonable engineering decisions where unspecified.
+Document them.
+Only stop for the user if an external dependency genuinely requires their action, such as:
+missing Bolna credential
+missing authorized test phone
+missing PostgreSQL availability
+missing external account permission
+
+Even then:
+finish all work that does not depend on that external input before stopping.
+
+66. IMPORTANT — DO NOT FABRICATE EXTERNAL SUCCESS
+Never claim:
+Bolna call passed
+official data imported
+security review passed
+database test passed
+
+unless actually executed.
+Use:
+PASS
+FAIL
+PARTIAL
+NOT_RUN
+BLOCKED
+
+truthfully.
+67. IMPLEMENTATION STYLE
+Work directly in the existing repository.
+Use test-driven development where practical.
+Run tests repeatedly.
+Do not destroy existing working code.
+Do not rewrite unrelated modules.
+Keep the architecture understandable.
+Prefer correctness over clever abstraction.
+68. FINAL INSTRUCTION
+Start by:
+1. Inspect repository.
+2. Read current docs/reports.
+3. Run all existing tests.
+4. Determine what is already implemented.
+5. Create a concise internal execution checklist.
+6. IMPLEMENT THE REMAINING PROJECT END-TO-END.
+7. Run database + API + integration + security tests.
+8. Connect the existing Bolna agent.
+9. Perform the real end-to-end development call if credentials/test recipient are available.
+10. Produce final documentation/report.
+
+Do not stop after Phase 2B.
+Do not ask whether to proceed to 2C, 2D, 2E, etc.
+Those labels are no longer execution gates.
+Treat the whole remaining system as one project to finish.
+The end state is:
+Bolna Voice Agent
+        +
+Deterministic Address Backend
+        +
+Postal Validation
+        +
+PostgreSQL
+        +
+Versioning
+        +
+Correction Handling
+        +
+Confirmation Integrity
+        +
+Persistence
+        +
+Security
+        +
+Tests
+        +
+End-to-End Demo
+
+Build it.

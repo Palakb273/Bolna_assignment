@@ -1,0 +1,15 @@
+# Ledger — docs/superpowers/plans/2026-09-30-phase2b-validation.md
+
+Execution approved; direct implementation. Baseline: 108 tests and 26 subtests passed.
+Ruling: use the supplied non-Git workspace and this persistent ledger, as approved in the plan; no Git snapshots or scratch-workspace scripts that require Git.
+Preflight: Task 1 policy/local rules feed Task 4; Task 2 shared provenance and proposal types feed Tasks 3–4; Task 3 directory interface feeds Task 4; Task 5 exercises all interfaces. Shared types must not introduce a domain-to-engine import cycle.
+Task 1: local rule tests failed on missing modules, then full suite passed: 121 tests, 26 subtests. Policy model is coupled to provenance and follows in shared metadata work.
+Task 2: normalization transition tests failed on missing proposal type; full suite then 126 passed, 26 subtests. Shared FrozenModel moved to base.py and re-exported from address.py to avoid a metadata import cycle. Proposal lives beside AddressVersion for the same reason.
+Task 3: postal tests failed on missing module; importer/directory tests then full suite 138 passed, 26 subtests. Synthetic CSV fixtures are generated in temporary directories; operator trust is simulated only to test importer mechanics, never claimed as real official acquisition.
+Task 4: engine tests failed on missing module, then 154 tests and 26 subtests passed. Policy identity includes configurable maximum source age. City/area completeness warnings explicitly limit VALID semantics.
+Task 5: v3-to-v4 normalization and late-v3 integration checks pass. Added failing origin-mismatch regression and enforce supplied result origins against current snapshot. Official resource retrieval returned a sandbox notice, catalog fetch timed out, and India Post listing exposed PDFs rather than the required CSV. No official dataset imported; real ingestion NOT_RUN.
+Final review: independent reviewer was dispatched but failed on usage limit, producing no verdict. Author self-review performed; independent review remains incomplete.
+Final fix: malformed postal state produced an uncaught Address validation exception. Regression failed, reference-text checks added at import/load/engine boundaries, then full suite 159 passed, 26 subtests. Importer malformed-control test also failed before the fix. Original unittest command 18 passed; CLI help and local documentation links passed.
+Ruling: preserve work and report partial acceptance rather than retry a usage-limited reviewer or substitute author review as independent approval. Cost: no independent review assurance until that gate can resume.
+Ruling: no third-party or synthetic data substituted for inaccessible official CSV. Cost: real-data ingestion and full 2B acceptance remain pending.
+Self-review scope: domain version revocation, origin preservation, immutable metadata, directory freshness/hash checks, error sanitization and existing save guard compatibility inspected. Production authenticity, deliverability, database concurrency and live customer consent remain outside this milestone and unverified.

@@ -1,0 +1,367 @@
+{
+  "csv_import": {
+    "rows_read": 39736,
+    "rows_accepted": 39733,
+    "rows_rejected": 3,
+    "unique_pins": 23915,
+    "malformed_reason_counts": {
+      "MALFORMED_PINCODE": 1,
+      "MISSING_PINCODE": 2,
+      "MISSING_STATE": 2,
+      "MISSING_DISTRICT": 2,
+      "MISSING_OFFICE_NAME": 2
+    },
+    "source_name": "User-supplied development CSV",
+    "resource_url": null,
+    "resource_id": null,
+    "source_date": null,
+    "original_filename": "pincodes.csv",
+    "imported_at": "2026-09-30T07:59:00.468113Z",
+    "source_sha256": "2b9fce4ed50cb98f1fde663970c378479c8569dea1ca2c816e37c56ef5bdd74e",
+    "records_sha256": "4840bc2fb0ec65278d9076c376a480db32a12a578e3f0de5df677214698a86da",
+    "format_version": 1,
+    "dataset_kind": "UNVERIFIED",
+    "source_kind": "UNVERIFIED_OR_STALE",
+    "retrieved_at": null,
+    "trusted_runtime_ready": false,
+    "demo_runtime_ready": true
+  },
+  "provider": {
+    "id": "41a3009a-7ee3-4382-b0a8-260aedea96a9",
+    "status": "completed",
+    "conversation_duration": 198.0
+  },
+  "raw_tools": [
+    {
+      "timestamp": "2026-09-30 08:06:13.561396",
+      "execution_id": "41a3009a-7ee3-4382-b0a8-260aedea96a9",
+      "session_id": "c74f6578-da85-4213-b37a-f6fcee8d05f0",
+      "tool_name": "custom_task_update_address",
+      "component": "function_call",
+      "direction": "request",
+      "error_reason": null
+    },
+    {
+      "timestamp": "2026-09-30 08:06:14.214689",
+      "execution_id": "41a3009a-7ee3-4382-b0a8-260aedea96a9",
+      "session_id": "c74f6578-da85-4213-b37a-f6fcee8d05f0",
+      "tool_name": "custom_task_update_address",
+      "component": "function_call",
+      "direction": "response",
+      "error_reason": null,
+      "response_version": 1
+    },
+    {
+      "timestamp": "2026-09-30 08:06:26.678943",
+      "execution_id": "41a3009a-7ee3-4382-b0a8-260aedea96a9",
+      "session_id": "c74f6578-da85-4213-b37a-f6fcee8d05f0",
+      "tool_name": "custom_task_update_address",
+      "component": "function_call",
+      "direction": "request",
+      "error_reason": null
+    },
+    {
+      "timestamp": "2026-09-30 08:06:26.792160",
+      "execution_id": "41a3009a-7ee3-4382-b0a8-260aedea96a9",
+      "session_id": "c74f6578-da85-4213-b37a-f6fcee8d05f0",
+      "tool_name": "custom_task_update_address",
+      "component": "function_call",
+      "direction": "response",
+      "error_reason": null,
+      "response_version": 2
+    },
+    {
+      "timestamp": "2026-09-30 08:06:38.033468",
+      "execution_id": "41a3009a-7ee3-4382-b0a8-260aedea96a9",
+      "session_id": "c74f6578-da85-4213-b37a-f6fcee8d05f0",
+      "tool_name": "custom_task_update_address",
+      "component": "function_call",
+      "direction": "request",
+      "error_reason": null
+    },
+    {
+      "timestamp": "2026-09-30 08:06:38.551243",
+      "execution_id": "41a3009a-7ee3-4382-b0a8-260aedea96a9",
+      "session_id": "c74f6578-da85-4213-b37a-f6fcee8d05f0",
+      "tool_name": "custom_task_update_address",
+      "component": "function_call",
+      "direction": "response",
+      "error_reason": null,
+      "response_version": 3
+    },
+    {
+      "timestamp": "2026-09-30 08:07:57.675138",
+      "execution_id": "41a3009a-7ee3-4382-b0a8-260aedea96a9",
+      "session_id": "c74f6578-da85-4213-b37a-f6fcee8d05f0",
+      "tool_name": "custom_task_update_address",
+      "component": "function_call",
+      "direction": "request",
+      "error_reason": null
+    },
+    {
+      "timestamp": "2026-09-30 08:07:58.225275",
+      "execution_id": "41a3009a-7ee3-4382-b0a8-260aedea96a9",
+      "session_id": "c74f6578-da85-4213-b37a-f6fcee8d05f0",
+      "tool_name": "custom_task_update_address",
+      "component": "function_call",
+      "direction": "response",
+      "error_reason": null,
+      "response_version": 4
+    },
+    {
+      "timestamp": "2026-09-30 08:07:59.267694",
+      "execution_id": "41a3009a-7ee3-4382-b0a8-260aedea96a9",
+      "session_id": "c74f6578-da85-4213-b37a-f6fcee8d05f0",
+      "tool_name": "custom_task_validate_address",
+      "component": "function_call",
+      "direction": "request",
+      "error_reason": null
+    },
+    {
+      "timestamp": "2026-09-30 08:07:59.973550",
+      "execution_id": "41a3009a-7ee3-4382-b0a8-260aedea96a9",
+      "session_id": "c74f6578-da85-4213-b37a-f6fcee8d05f0",
+      "tool_name": "custom_task_validate_address",
+      "component": "function_call",
+      "direction": "response",
+      "error_reason": null,
+      "response_state": "NEEDS_CLARIFICATION",
+      "response_version": 4
+    },
+    {
+      "timestamp": "2026-09-30 08:08:35.414687",
+      "execution_id": "41a3009a-7ee3-4382-b0a8-260aedea96a9",
+      "session_id": "c74f6578-da85-4213-b37a-f6fcee8d05f0",
+      "tool_name": "custom_task_prepare_address_readback",
+      "component": "function_call",
+      "direction": "request",
+      "error_reason": null
+    },
+    {
+      "timestamp": "2026-09-30 08:08:36.064917",
+      "execution_id": "41a3009a-7ee3-4382-b0a8-260aedea96a9",
+      "session_id": "c74f6578-da85-4213-b37a-f6fcee8d05f0",
+      "tool_name": "custom_task_prepare_address_readback",
+      "component": "function_call",
+      "direction": "response",
+      "error_reason": "ADDRESS_NOT_VALIDATED"
+    }
+  ],
+  "backend": [
+    {
+      "request_id": "6870f848-0a9c-4b0a-bd48-000f3cbd6df1",
+      "session_id": "c74f6578-da85-4213-b37a-f6fcee8d05f0",
+      "execution_id": "pending-48ae7775-b67d-4a7a-8584-08ca94d1510c",
+      "operation": "SESSION_CREATED",
+      "version": 0,
+      "status": "COLLECTING",
+      "reason_codes": []
+    },
+    {
+      "request_id": "8806d95f-6885-4507-9da4-679d2bbcc7eb",
+      "tool_name": "get_address_session",
+      "status": 200,
+      "session_id": "c74f6578-da85-4213-b37a-f6fcee8d05f0",
+      "execution_id": "pending-48ae7775-b67d-4a7a-8584-08ca94d1510c",
+      "error_reason": null
+    },
+    {
+      "request_id": "7ce8a4fa-203b-45c8-b9a5-3eee2346f16b",
+      "session_id": "c74f6578-da85-4213-b37a-f6fcee8d05f0",
+      "execution_id": "41a3009a-7ee3-4382-b0a8-260aedea96a9",
+      "operation": "EXECUTION_BOUND",
+      "version": 0,
+      "status": "COLLECTING",
+      "reason_codes": []
+    },
+    {
+      "request_id": "7ce8a4fa-203b-45c8-b9a5-3eee2346f16b",
+      "tool_name": null,
+      "status": 200,
+      "session_id": "c74f6578-da85-4213-b37a-f6fcee8d05f0",
+      "execution_id": null,
+      "error_reason": null
+    },
+    {
+      "request_id": "0f0ecc62-cd05-4920-851f-d58af7e2f84d",
+      "tool_name": "get_address_session",
+      "status": 200,
+      "session_id": "c74f6578-da85-4213-b37a-f6fcee8d05f0",
+      "execution_id": "41a3009a-7ee3-4382-b0a8-260aedea96a9",
+      "error_reason": null
+    },
+    {
+      "request_id": "6c590080-33fa-4ac5-809b-9d85d1b7571f",
+      "tool_name": null,
+      "status": 200,
+      "session_id": "c74f6578-da85-4213-b37a-f6fcee8d05f0",
+      "execution_id": null,
+      "error_reason": null
+    },
+    {
+      "request_id": "510118a5-bc20-4722-9744-977adc79bec0",
+      "tool_name": null,
+      "status": 200,
+      "session_id": "c74f6578-da85-4213-b37a-f6fcee8d05f0",
+      "execution_id": null,
+      "error_reason": null
+    },
+    {
+      "request_id": "dcafd36b-e133-4d7c-8cb5-907a2bffe70a",
+      "session_id": "c74f6578-da85-4213-b37a-f6fcee8d05f0",
+      "execution_id": "41a3009a-7ee3-4382-b0a8-260aedea96a9",
+      "operation": "CANDIDATE_UPDATED",
+      "version": 1,
+      "status": "CANDIDATE_UPDATED",
+      "reason_codes": []
+    },
+    {
+      "request_id": "dcafd36b-e133-4d7c-8cb5-907a2bffe70a",
+      "tool_name": "update_address",
+      "status": 200,
+      "session_id": "c74f6578-da85-4213-b37a-f6fcee8d05f0",
+      "execution_id": "41a3009a-7ee3-4382-b0a8-260aedea96a9",
+      "error_reason": null
+    },
+    {
+      "request_id": "2cf26d71-4833-4fee-be41-8549e5a2b3b4",
+      "session_id": "c74f6578-da85-4213-b37a-f6fcee8d05f0",
+      "execution_id": "41a3009a-7ee3-4382-b0a8-260aedea96a9",
+      "operation": "CANDIDATE_UPDATED",
+      "version": 2,
+      "status": "CANDIDATE_UPDATED",
+      "reason_codes": []
+    },
+    {
+      "request_id": "2cf26d71-4833-4fee-be41-8549e5a2b3b4",
+      "tool_name": "update_address",
+      "status": 200,
+      "session_id": "c74f6578-da85-4213-b37a-f6fcee8d05f0",
+      "execution_id": "41a3009a-7ee3-4382-b0a8-260aedea96a9",
+      "error_reason": null
+    },
+    {
+      "request_id": "fab97190-5902-4cb4-85b5-2618b0d2797c",
+      "session_id": "c74f6578-da85-4213-b37a-f6fcee8d05f0",
+      "execution_id": "41a3009a-7ee3-4382-b0a8-260aedea96a9",
+      "operation": "CANDIDATE_UPDATED",
+      "version": 3,
+      "status": "CANDIDATE_UPDATED",
+      "reason_codes": []
+    },
+    {
+      "request_id": "fab97190-5902-4cb4-85b5-2618b0d2797c",
+      "tool_name": "update_address",
+      "status": 200,
+      "session_id": "c74f6578-da85-4213-b37a-f6fcee8d05f0",
+      "execution_id": "41a3009a-7ee3-4382-b0a8-260aedea96a9",
+      "error_reason": null
+    },
+    {
+      "request_id": "f773b169-30d6-4e8f-8bf5-b3a1fce8746d",
+      "tool_name": null,
+      "status": 200,
+      "session_id": "c74f6578-da85-4213-b37a-f6fcee8d05f0",
+      "execution_id": null,
+      "error_reason": null
+    },
+    {
+      "request_id": "4a53396c-aaf8-4add-a04c-3b280782cd0a",
+      "session_id": "c74f6578-da85-4213-b37a-f6fcee8d05f0",
+      "execution_id": "41a3009a-7ee3-4382-b0a8-260aedea96a9",
+      "operation": "CANDIDATE_UPDATED",
+      "version": 4,
+      "status": "CANDIDATE_UPDATED",
+      "reason_codes": []
+    },
+    {
+      "request_id": "4a53396c-aaf8-4add-a04c-3b280782cd0a",
+      "tool_name": "update_address",
+      "status": 200,
+      "session_id": "c74f6578-da85-4213-b37a-f6fcee8d05f0",
+      "execution_id": "41a3009a-7ee3-4382-b0a8-260aedea96a9",
+      "error_reason": null
+    },
+    {
+      "request_id": "ef14ff67-8779-4998-acef-affb7ccaf2f8",
+      "session_id": "c74f6578-da85-4213-b37a-f6fcee8d05f0",
+      "execution_id": "41a3009a-7ee3-4382-b0a8-260aedea96a9",
+      "operation": "VALIDATION_RECORDED",
+      "version": 4,
+      "status": "NEEDS_CLARIFICATION",
+      "reason_codes": [
+        "PINCODE_NOT_FOUND"
+      ]
+    },
+    {
+      "request_id": "ef14ff67-8779-4998-acef-affb7ccaf2f8",
+      "tool_name": "validate_address",
+      "status": 200,
+      "session_id": "c74f6578-da85-4213-b37a-f6fcee8d05f0",
+      "execution_id": "41a3009a-7ee3-4382-b0a8-260aedea96a9",
+      "error_reason": null
+    },
+    {
+      "request_id": "946f3d75-d10b-4dfb-9e86-323b8ca13459",
+      "tool_name": null,
+      "status": 200,
+      "session_id": "c74f6578-da85-4213-b37a-f6fcee8d05f0",
+      "execution_id": null,
+      "error_reason": null
+    },
+    {
+      "request_id": "3be9d6b9-003a-49f8-820f-5925f0f6342b",
+      "tool_name": "prepare_address_readback",
+      "status": 409,
+      "session_id": "c74f6578-da85-4213-b37a-f6fcee8d05f0",
+      "execution_id": "41a3009a-7ee3-4382-b0a8-260aedea96a9",
+      "error_reason": "ADDRESS_NOT_VALIDATED"
+    },
+    {
+      "request_id": "6be09b34-9e13-49f7-80da-f2b1df01ac19",
+      "tool_name": null,
+      "status": 200,
+      "session_id": "c74f6578-da85-4213-b37a-f6fcee8d05f0",
+      "execution_id": null,
+      "error_reason": null
+    }
+  ],
+  "session": {
+    "execution_id": "41a3009a-7ee3-4382-b0a8-260aedea96a9",
+    "session_id": "c74f6578-da85-4213-b37a-f6fcee8d05f0",
+    "current_version": 4,
+    "validated_version": null,
+    "confirmed_version": null,
+    "status": "NEEDS_CLARIFICATION",
+    "validation_status": "NEEDS_CLARIFICATION",
+    "source_kind": "UNVERIFIED_OR_STALE",
+    "readback_attempt_id": null,
+    "readback_version": null,
+    "readback_digest": null,
+    "readback_attempt_count": 0,
+    "saved_address_count": 0,
+    "trusted_evidence_count": 0,
+    "assistant_transcript_exact_readback": false,
+    "synthesizer_input_contains_readback": false,
+    "LIVE_SPOKEN_READBACK": "NOT_VERIFIED",
+    "conversation_outcome": null
+  },
+  "pin_comparison": {
+    "captured_pin_matches_selected_demo": false,
+    "captured_pin_exists_in_imported_directory": false,
+    "selected_pin_exists_in_imported_directory": true,
+    "original_csv_sha256_unchanged": true
+  },
+  "restored": true,
+  "restoration_verified_at": "2026-09-30T10:38:08.644488+00:00",
+  "tunnel_stopped": true,
+  "paths": {
+    "LIVE_UPDATE_PATH": "PASS",
+    "LIVE_VALIDATION_PATH": "FAIL",
+    "LIVE_READBACK_PATH": "FAIL",
+    "LIVE_SPOKEN_READBACK": "NOT_VERIFIED",
+    "LIVE_CONFIRMATION_PATH": "BLOCKED",
+    "LIVE_SAVE_PATH": "BLOCKED"
+  },
+  "conversation_outcome": null
+}
